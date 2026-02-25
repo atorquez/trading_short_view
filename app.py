@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-# VERSION 1.2
+# VERSION 1.5
 
 import streamlit as st
 
@@ -70,8 +70,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.write("THIS IS SPC APP")
-st.title("📈 Stock Analyzer App")
+st.write("Trade-short-term")
+st.title("📈 Stock Decisions")
 
 
 # ===============================
@@ -417,7 +417,7 @@ def generate_signal_chart(df, last_n=180):
 # STREAMLIT APP
 # ===============================
 
-st.set_page_config(page_title="ZTS Swing Engine", layout="wide")
+st.set_page_config(page_title="Short-Term Trade Engine", layout="wide")
 
 st.title("Swing Breakout Backtest & Signal Dashboard")
 
@@ -502,9 +502,11 @@ st.markdown("""
 | **MA20** | 20-day moving average. Measures short-term trend direction. |
 | **MA50** | 50-day moving average. Measures medium-term trend strength. |
 | **Trend Strength** | Composite score (0–100) based on price vs. MA20/MA50 and slope direction. |
-| **Entry Signal** | True when price breaks above HH5 and all trend filters are satisfied. |
+| **Entry Signal** | True when price breaks above HH5 *and* all trend filters are satisfied. |
 | **Stop Distance %** | Distance between current price and LL3 stop level, expressed as a percentage. |
 | **Volatility %** | Short-term price volatility used for risk assessment. |
 | **Risk Level** | LOW / MEDIUM / HIGH based on stop distance and volatility. |
 | **Exit Reason** | Why the trade closed: `time` (5-day rule) or `stop` (LL3 break). |
+| **Today's Recommendation** | The system’s action for today: **BUY**, **SELL**, or **NO SIGNAL**. |
+| **Why Today’s Recommendation?** | **BUY** = breakout above HH5 + trend filters valid. **SELL** = active trade hit stop or time exit. **NO SIGNAL** = breakout conditions not met today. |
 """)
