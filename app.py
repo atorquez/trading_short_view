@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-# VERSION 2 
+# VERSION 2.1
 
 # ===============================
 # COMPANY NAME LOOKUP
