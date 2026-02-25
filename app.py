@@ -489,3 +489,22 @@ if run_button:
             st.write("No trades generated for this configuration.")
 else:
     st.info("Set parameters in the sidebar and click **Run Backtest**.")
+
+#DEFINITONS
+st.markdown("---")
+st.subheader("📘 Key Indicator Definitions")
+
+st.markdown("""
+| **Indicator** | **Meaning** |
+|---------------|-------------|
+| **HH5** | Highest High of the last 5 days. Used as the breakout trigger. |
+| **LL3** | Lowest Low of the last 3 days. Used as the stop-loss level. |
+| **MA20** | 20-day moving average. Measures short-term trend direction. |
+| **MA50** | 50-day moving average. Measures medium-term trend strength. |
+| **Trend Strength** | Composite score (0–100) based on price vs. MA20/MA50 and slope direction. |
+| **Entry Signal** | True when price breaks above HH5 and all trend filters are satisfied. |
+| **Stop Distance %** | Distance between current price and LL3 stop level, expressed as a percentage. |
+| **Volatility %** | Short-term price volatility used for risk assessment. |
+| **Risk Level** | LOW / MEDIUM / HIGH based on stop distance and volatility. |
+| **Exit Reason** | Why the trade closed: `time` (5-day rule) or `stop` (LL3 break). |
+""")
