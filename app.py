@@ -4,36 +4,68 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-# VERSION 1.5
+# VERSION 1.6 — Company Name Added
 
-import streamlit as st
+# ===============================
+# COMPANY NAME LOOKUP
+# ===============================
+
+def get_company_name(ticker):
+    try:
+        info = yf.Ticker(ticker).info
+        return info.get("longName", None)
+    except:
+        return None
+
+
+# ===============================
+# BADGE RENDERING
+# ===============================
+
+def render_badge(recommendation):
+    if recommendation == "BUY":
+        color = "#2ecc71"   # green
+    elif recommendation == "SELL":
+        color = "#e74c3c"   # red
+    else:
+        color = "#f1c40f"   # gold (NO SIGNAL)
+
+    html = f"""
+    <span style="
+        background-color:{color};
+        color:black;
+        padding:6px 12px;
+        border-radius:6px;
+        font-weight:700;
+        font-size:16px;
+    ">
+        {recommendation}
+    </span>
+    """
+    return html
+
 
 # MUST come before any Streamlit layout or widgets
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Short-Term Trade Engine", layout="wide")
 
-# Custom dark theme styling
+# ===============================
+# DARK THEME
+# ===============================
+
 st.markdown("""
 <style>
-
-    /* Global background */
     html, body, [data-testid="stAppViewContainer"], .stApp {
         background-color: #0d1117 !important;
         color: #e6e6e6 !important;
     }
-
-    /* Main content area */
     [data-testid="stAppViewContainer"] > .main, .block-container {
         background-color: #0d1117 !important;
         color: #e6e6e6 !important;
     }
-
-    /* Labels */
     label, .stTextInput label {
         font-weight: 600 !important;
         color: #e6e6e6 !important;
     }
-
-    /* Table header */
     thead tr th {
         font-size: 18px !important;
         font-weight: 800 !important;
@@ -41,18 +73,13 @@ st.markdown("""
         color: #f1c40f !important;
         border-bottom: 2px solid #f1c40f !important;
     }
-
-    /* Table body */
     tbody tr td {
         font-size: 16px !important;
         color: #e6e6e6 !important;
     }
-
     tbody tr:hover {
         background-color: #1f2937 !important;
     }
-
-    /* Buttons */
     .stButton>button {
         background-color: #f1c40f !important;
         color: black !important;
@@ -61,81 +88,75 @@ st.markdown("""
         height: 3em !important;
         width: 10em !important;
     }
-
     .stButton>button:hover {
         background-color: #d4ac0d !important;
         color: white !important;
     }
-
 </style>
 """, unsafe_allow_html=True)
 
-st.write("Trade-short-term")
-st.title("📈 Stock Decisions")
+
+# ===============================
+# HEADER
+# ===============================
+
+st.title("Swing Breakout Backtest & Signal Dashboard")
+
+with st.sidebar:
+    st.header("Parameters")
+
+    ticker = st.text_input("Ticker", value="ZTS")
+    start_date = st.text_input("Start Date", value="2015-01-01")
+    end_date = st.text_input("End Date (optional)", value="")
+    initial_capital = st.number_input("Initial Capital", value=100000, step=1000)
+    risk_per_trade = st.number_input("Risk per Trade (fraction)", value=0.01, step=0.005, format="%.3f")
+    hold_days = st.number_input("Hold Days", value=5, step=1)
+    run_button = st.button("Run Backtest")
+
+# Fetch company name
+company_name = get_company_name(ticker)
+
+# Display ticker + company name
+if company_name:
+    st.markdown(f"### 🏷️ {ticker.upper()} — **{company_name}**")
+else:
+    st.markdown(f"### 🏷️ Ticker Selected: **{ticker.upper()}**")
 
 
 # ===============================
-# CORE CONFIG DEFAULTS
-# ===============================
-
-DEFAULT_TICKER = "ZTS"
-DEFAULT_START = "2015-01-01"
-DEFAULT_INITIAL_CAPITAL = 100000
-DEFAULT_RISK_PER_TRADE = 0.01
-DEFAULT_HOLD_DAYS = 5
-
-MA_FAST = 5
-MA_MED = 20
-MA_SLOW = 50
-HH_LOOKBACK = 5
-LL_LOOKBACK = 3
-
-
-# ===============================
-# DATA & INDICATORS
+# DATA FUNCTIONS
 # ===============================
 
 def download_data(ticker: str, start: str, end: str | None = None) -> pd.DataFrame:
     df = yf.download(ticker, start=start, end=end)
-
     if df.empty:
         return df
-
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = ['_'.join(col).strip() for col in df.columns]
     df.columns = [c.split("_")[0] for c in df.columns]
-
-    df = df[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
-    return df
+    return df[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
 
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-
-    df['MA_FAST'] = df['Close'].rolling(MA_FAST).mean()
-    df['MA_MED'] = df['Close'].rolling(MA_MED).mean()
-    df['MA_SLOW'] = df['Close'].rolling(MA_SLOW).mean()
-
+    df['MA_FAST'] = df['Close'].rolling(5).mean()
+    df['MA_MED'] = df['Close'].rolling(20).mean()
+    df['MA_SLOW'] = df['Close'].rolling(50).mean()
     df['MA_SLOW_slope'] = df['MA_SLOW'] > df['MA_SLOW'].shift(1)
-
-    df['HH'] = df['High'].rolling(HH_LOOKBACK).max().shift(1)
-    df['LL'] = df['Low'].rolling(LL_LOOKBACK).min().shift(1)
-
+    df['HH'] = df['High'].rolling(5).max().shift(1)
+    df['LL'] = df['Low'].rolling(3).min().shift(1)
     return df
 
 
 def add_signals(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-
     df['trend_filter'] = (df['Close'] > df['MA_SLOW']) & (df['MA_SLOW_slope'])
-
     df['entry_signal'] = (
         (df['Close'] > df['HH']) &
         (df['Close'] > df['MA_MED']) &
         (df['MA_MED'] > df['MA_MED'].shift(1)) &
         df['trend_filter']
     )
-
     return df
 
 
@@ -143,23 +164,17 @@ def add_signals(df: pd.DataFrame) -> pd.DataFrame:
 # BACKTEST ENGINE
 # ===============================
 
-def run_backtest(df: pd.DataFrame,
-                 initial_capital: float,
-                 risk_per_trade: float,
-                 hold_days: int):
-
+def run_backtest(df, initial_capital, risk_per_trade, hold_days):
     df = df.copy()
-
     capital = initial_capital
     equity_curve = []
     position = 0
     entry_price = 0.0
     entry_index = None
     holding_counter = 0
-
     trades = []
 
-    start_i = max(MA_SLOW, HH_LOOKBACK + 1, LL_LOOKBACK + 1)
+    start_i = max(50, 6, 4)
 
     for i in range(start_i, len(df)):
         row = df.iloc[i]
@@ -171,10 +186,8 @@ def run_backtest(df: pd.DataFrame,
             equity = capital
         equity_curve.append({'Date': idx, 'Equity': equity})
 
-        # EXIT LOGIC
         if position > 0:
             holding_counter += 1
-
             stop_price = df['LL'].iloc[i]
             if np.isnan(stop_price):
                 stop_price = entry_price * 0.97
@@ -213,7 +226,6 @@ def run_backtest(df: pd.DataFrame,
                 holding_counter = 0
                 continue
 
-        # ENTRY LOGIC
         if position == 0 and row['entry_signal']:
             stop_level = df['LL'].iloc[i]
             if np.isnan(stop_level) or stop_level >= row['Close']:
@@ -232,17 +244,15 @@ def run_backtest(df: pd.DataFrame,
 
     equity_df = pd.DataFrame(equity_curve).set_index('Date')
     trades_df = pd.DataFrame(trades)
-
     return equity_df, trades_df, capital, position, entry_price, holding_counter
 
 
 # ===============================
-# PERFORMANCE METRICS
+# METRICS & HELPERS
 # ===============================
 
 def compute_performance(equity_df, trades_df, initial_capital):
     perf = {}
-
     if equity_df.empty:
         return {"error": "No equity data"}
 
@@ -298,16 +308,6 @@ def compute_performance(equity_df, trades_df, initial_capital):
     return perf
 
 
-# ===============================
-# DASHBOARD COMPONENTS
-# ===============================
-
-def recent_signal_snapshot(df: pd.DataFrame, days: int = 7):
-    cols = ['Close', 'HH', 'LL', 'MA_MED', 'MA_SLOW', 'trend_filter', 'entry_signal']
-    available = [c for c in cols if c in df.columns]
-    return df[available].tail(days)
-
-
 def todays_recommendation(df, position, entry_price, hold_counter, hold_days):
     if df.empty:
         return "NO DATA"
@@ -357,7 +357,6 @@ def compute_risk_meter(df):
         return {"stop_distance_pct": None, "volatility_pct": None, "risk_level": "N/A"}
 
     last = df.iloc[-1]
-
     stop = last['LL']
     if np.isnan(stop):
         stop = last['Close'] * 0.97
@@ -376,12 +375,17 @@ def compute_risk_meter(df):
     }
 
 
-def generate_signal_chart(df, last_n=180):
+def recent_signal_snapshot(df, days=10):
+    cols = ['Close', 'HH', 'LL', 'MA_MED', 'MA_SLOW', 'trend_filter', 'entry_signal']
+    available = [c for c in cols if c in df.columns]
+    return df[available].tail(days)
+
+
+def generate_signal_chart(df, ticker, company_name, last_n=180):
     if df.empty:
         return go.Figure()
 
     d = df.tail(last_n)
-
     fig = go.Figure()
 
     fig.add_trace(go.Candlestick(
@@ -402,8 +406,14 @@ def generate_signal_chart(df, last_n=180):
     fig.add_trace(go.Scatter(x=d.index, y=d['LL'], mode='lines',
                              name='LL3', line=dict(color='red', dash='dot')))
 
+    title_text = (
+        f"{ticker.upper()} — {company_name} — Price & Signals"
+        if company_name else
+        f"{ticker.upper()} — Price & Signals"
+    )
+
     fig.update_layout(
-        title=f"{ticker} – Price & Signals",
+        title=title_text,
         xaxis_title="Date",
         yaxis_title="Price",
         template="plotly_white",
@@ -414,25 +424,8 @@ def generate_signal_chart(df, last_n=180):
 
 
 # ===============================
-# STREAMLIT APP
+# MAIN APP LOGIC
 # ===============================
-
-st.set_page_config(page_title="Short-Term Trade Engine", layout="wide")
-
-st.title("Swing Breakout Backtest & Signal Dashboard")
-
-with st.sidebar:
-    st.header("Parameters")
-
-    ticker = st.text_input("Ticker", value=DEFAULT_TICKER)
-    start_date = st.text_input("Start Date", value=DEFAULT_START)
-    end_date = st.text_input("End Date (optional)", value="")
-
-    initial_capital = st.number_input("Initial Capital", value=DEFAULT_INITIAL_CAPITAL, step=1000)
-    risk_per_trade = st.number_input("Risk per Trade (fraction)", value=DEFAULT_RISK_PER_TRADE, step=0.005, format="%.3f")
-    hold_days = st.number_input("Hold Days", value=DEFAULT_HOLD_DAYS, step=1)
-
-    run_button = st.button("Run Backtest")
 
 if run_button:
     end = end_date if end_date.strip() != "" else None
@@ -455,13 +448,19 @@ if run_button:
 
         with col1:
             st.subheader("Performance")
+            if company_name:
+                st.write(f"**Ticker:** {ticker.upper()} — {company_name}")
+            else:
+                st.write(f"**Ticker:** {ticker.upper()}")
             for k, v in perf.items():
                 st.write(f"**{k}**: {v}")
 
         with col2:
             st.subheader("Today")
+
             rec = todays_recommendation(df, position, entry_price, holding_counter, hold_days)
-            st.write(f"**Recommendation:** {rec}")
+            st.markdown("**Recommendation:**")
+            st.markdown(render_badge(rec), unsafe_allow_html=True)
 
             trend_score = compute_trend_strength(df)
             st.write(f"**Trend Strength:** {trend_score}/100")
@@ -474,12 +473,13 @@ if run_button:
         st.subheader("Recent Signal Snapshot")
         st.dataframe(recent_signal_snapshot(df, days=10))
 
-        st.subheader("Equity Curve")
-        if not equity_df.empty:
-            st.line_chart(equity_df['Equity'])
+        st.subheader(
+            f"Price & Signals – {ticker.upper()} ({company_name})"
+            if company_name else
+            f"Price & Signals – {ticker.upper()}"
+        )
 
-        st.subheader("Price & Signals")
-        fig = generate_signal_chart(df)
+        fig = generate_signal_chart(df, ticker, company_name)
         st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("Trades")
@@ -490,7 +490,11 @@ if run_button:
 else:
     st.info("Set parameters in the sidebar and click **Run Backtest**.")
 
-#DEFINITONS
+
+# ===============================
+# DEFINITIONS TABLE
+# ===============================
+
 st.markdown("---")
 st.subheader("📘 Key Indicator Definitions")
 
