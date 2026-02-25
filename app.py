@@ -4,6 +4,75 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
+# VERSION 1
+
+import streamlit as st
+
+# MUST come before any Streamlit layout or widgets
+st.set_page_config(layout="wide")
+
+# Custom dark theme styling
+st.markdown("""
+<style>
+
+    /* Global background */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background-color: #0d1117 !important;
+        color: #e6e6e6 !important;
+    }
+
+    /* Main content area */
+    [data-testid="stAppViewContainer"] > .main, .block-container {
+        background-color: #0d1117 !important;
+        color: #e6e6e6 !important;
+    }
+
+    /* Labels */
+    label, .stTextInput label {
+        font-weight: 600 !important;
+        color: #e6e6e6 !important;
+    }
+
+    /* Table header */
+    thead tr th {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        background-color: #161b22 !important;
+        color: #f1c40f !important;
+        border-bottom: 2px solid #f1c40f !important;
+    }
+
+    /* Table body */
+    tbody tr td {
+        font-size: 16px !important;
+        color: #e6e6e6 !important;
+    }
+
+    tbody tr:hover {
+        background-color: #1f2937 !important;
+    }
+
+    /* Buttons */
+    .stButton>button {
+        background-color: #f1c40f !important;
+        color: black !important;
+        font-weight: 700 !important;
+        border-radius: 6px !important;
+        height: 3em !important;
+        width: 10em !important;
+    }
+
+    .stButton>button:hover {
+        background-color: #d4ac0d !important;
+        color: white !important;
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
+st.write("THIS IS SPC APP")
+st.title("📈 Stock Analyzer App")
+
 
 # ===============================
 # CORE CONFIG DEFAULTS
