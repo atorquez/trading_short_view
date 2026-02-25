@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-# VERSION 1
+# VERSION 1.2
 
 import streamlit as st
 
